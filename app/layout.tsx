@@ -1,3 +1,5 @@
+import TanStackProvider from '@/components/TanStackProvider/TanStackProvider';
+
 export default function RootLayout({
   children,
   modal,
@@ -8,8 +10,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        {modal}
+        <TanStackProvider>
+          {children}
+          {modal}
+        </TanStackProvider>
       </body>
     </html>
   );
