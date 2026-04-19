@@ -1,60 +1,65 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { useNoteStore, initialDraft } from "@/lib/store/noteStore";
-import { notesApi } from "@/lib/api/notes";
-import { TagType } from "@/types/note";
-import css from "./NoteForm.module.css";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useNoteStore, initialDraft } from '@/lib/store/noteStore';
+import { apiService } from '@/lib/api';
+import { TagType } from '@/types/note';
+import css from './NoteForm.module.css';
 
-const tags: TagType[] = ["Todo", "In Progress", "Done"];
+const tags: TagType[] = ['Todo', 'In Progress', 'Done'];
 
 export default function NoteForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { draft, setDraft, clearDraft } = useNoteStore();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    if (!draft.title && !draft.content && draft.tag === "Todo") {
+    if (!draft.title && !draft.content && draft.tag === 'Todo') {
       setDraft(initialDraft);
     }
   }, []);
 
+  const { mutate, isPending } = useMutation({
+    mutationFn: apiService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      clearDraft();
+      router.push('/notes');
+    },
+    onError: () => {
+      setError('Failed to create note. Please try again.');
+    },
+  });
+
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setDraft({ ...draft, [name]: value });
   };
 
-  const handleSubmit = async (formData: FormData) => {
-    setError("");
+  const handleSubmit = (formData: FormData) => {
+    setError('');
     const noteData = {
-      title: formData.get("title") as string,
-      content: formData.get("content") as string,
-      tag: formData.get("tag") as TagType,
+      title: formData.get('title') as string,
+      content: formData.get('content') as string,
+      tag: formData.get('tag') as TagType,
     };
 
     if (!noteData.title.trim()) {
-      setError("Title is required");
+      setError('Title is required');
       return;
     }
 
     if (!noteData.content.trim()) {
-      setError("Content is required");
+      setError('Content is required');
       return;
     }
 
-    try {
-      await notesApi.create(noteData);
-      clearDraft();
-      router.back();
-    } catch (err) {
-      setError("Failed to create note. Please try again.");
-    }
+    mutate(noteData);
   };
 
   const handleCancel = () => {
@@ -117,15 +122,11 @@ export default function NoteForm() {
       </div>
 
       <div className={css.buttons}>
-        <button
-          type="button"
-          onClick={handleCancel}
-          className={css.cancelButton}
-        >
+        <button type="button" onClick={handleCancel} className={css.cancelButton}>
           Cancel
         </button>
         <button type="submit" disabled={isPending} className={css.submitButton}>
-          {isPending ? "Creating..." : "Create Note"}
+          {isPending ? 'Creating...' : 'Create Note'}
         </button>
       </div>
     </form>
