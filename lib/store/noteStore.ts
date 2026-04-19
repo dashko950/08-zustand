@@ -1,11 +1,11 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { DraftNote } from "@/types/note";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { DraftNote } from '@/types/note';
 
 export const initialDraft: DraftNote = {
-  title: "",
-  content: "",
-  tag: "Todo",
+  title: '',
+  content: '',
+  tag: 'Todo', // ← змінити з 'In Progress' на 'Todo'
 };
 
 interface NoteStore {
@@ -22,7 +22,7 @@ export const useNoteStore = create<NoteStore>()(
       clearDraft: () => set({ draft: initialDraft }),
     }),
     {
-      name: "note-draft-storage",
-    },
-  ),
+      name: 'note-draft-storage',
+    }
+  )
 );

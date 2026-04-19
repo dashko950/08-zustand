@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react'; // ← прибрати useDebounce
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import SearchBox from '@/components/SearchBox/SearchBox';
 import Pagination from '@/components/Pagination/Pagination';
+import NoteList from '@/components/NoteList/NoteList';
 import css from './Notes.module.css';
 
 interface NotesClientProps {
@@ -15,7 +16,6 @@ interface NotesClientProps {
 
 const ITEMS_PER_PAGE = 6;
 
-// Власний хук debounce
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
@@ -33,31 +33,25 @@ export default function NotesClient({ tag }: NotesClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearch = useDebounce(searchQuery, 500);
 
+  // Включаємо currentPage в queryKey для правильного кешування
   const { data: allNotes, isLoading } = useQuery({
-    queryKey: ['notes', tag, debouncedSearch],
-    queryFn: () => apiService.getAll(),
+    queryKey: ['notes', tag, debouncedSearch, currentPage],
+    queryFn: () =>
+      apiService.getAll({
+        tag,
+        search: debouncedSearch,
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      }),
   });
-
-  // Фільтрація за тегом та пошуком
-  const filteredNotes = allNotes?.filter((note) => {
-    const matchesTag = note.tag.toLowerCase() === tag.toLowerCase();
-    const matchesSearch =
-      debouncedSearch === '' ||
-      note.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      note.content.toLowerCase().includes(debouncedSearch.toLowerCase());
-    return matchesTag && matchesSearch;
-  });
-
-  // Пагінація
-  const totalPages = Math.ceil((filteredNotes?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedNotes = filteredNotes?.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   if (isLoading) return <div className={css.loading}>Loading...</div>;
@@ -73,27 +67,19 @@ export default function NotesClient({ tag }: NotesClientProps) {
 
       <SearchBox onSearch={handleSearch} />
 
-      {paginatedNotes?.length === 0 ? (
+      {allNotes?.data?.length === 0 ? (
         <p className={css.empty}>No notes found</p>
       ) : (
         <>
-          <div className={css.grid}>
-            {paginatedNotes?.map((note) => (
-              <Link href={`/notes/${note.id}`} key={note.id} className={css.card}>
-                <h3>{note.title}</h3>
-                <p>{note.content.substring(0, 100)}...</p>
-                <span className={css.tag}>{note.tag}</span>
-              </Link>
-            ))}
-          </div>
+          {/* Використовуємо компонент NoteList */}
+          <NoteList notes={allNotes?.data || []} />
 
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
+          {/* Pagination рендеримо завжди, з правильними пропсами */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={allNotes?.totalPages || 1}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </div>

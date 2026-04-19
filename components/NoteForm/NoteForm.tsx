@@ -8,7 +8,7 @@ import { apiService } from '@/lib/api';
 import { TagType } from '@/types/note';
 import css from './NoteForm.module.css';
 
-const tags: TagType[] = ['Todo', 'In Progress', 'Done'];
+const tags: TagType[] = ['Todo', 'Work', 'Personal', 'Meeting', 'Shopping'];
 
 export default function NoteForm() {
   const router = useRouter();

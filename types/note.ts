@@ -2,7 +2,7 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  tag: "Todo" | "In Progress" | "Done";
+  tag: 'Todo' | 'Work' | 'Personal' | 'Meeting' | 'Shopping';
   createdAt: string;
   updatedAt: string;
 }
@@ -10,13 +10,13 @@ export interface Note {
 export interface CreateNoteDto {
   title: string;
   content: string;
-  tag: "Todo" | "In Progress" | "Done";
+  tag: 'Todo' | 'Work' | 'Personal' | 'Meeting' | 'Shopping';
 }
 
 export interface DraftNote {
   title: string;
   content: string;
-  tag: "Todo" | "In Progress" | "Done";
+  tag: 'Todo' | 'Work' | 'Personal' | 'Meeting' | 'Shopping';
 }
 
-export type TagType = "Todo" | "In Progress" | "Done";
+export type TagType = 'Todo' | 'Work' | 'Personal' | 'Meeting' | 'Shopping';

@@ -1,10 +1,7 @@
 import axios from 'axios';
 import { Note, CreateNoteDto } from '@/types/note';
 
-// Якщо немає реального API, використовуємо mock
-const USE_MOCK = true; // Зміни на false коли з'явиться реальне API
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,90 +10,130 @@ const api = axios.create({
   },
 });
 
-// Mock дані
+interface GetNotesParams {
+  tag?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface GetNotesResponse {
+  data: Note[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+// Mock дані з правильними тегами
 let mockNotes: Note[] = [
   {
     id: '1',
     title: 'Welcome to NoteHub',
-    content: 'Start creating your notes! Click "Create note" to add your first note.',
+    content: 'Start creating your notes! This is a sample note to get you started.',
     tag: 'Todo',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     id: '2',
-    title: 'Example Note',
-    content: 'This is an example note. You can edit or delete it.',
-    tag: 'In Progress',
+    title: 'Meeting Notes',
+    content: 'Discuss project timeline with the team. Review Q1 goals and set Q2 objectives.',
+    tag: 'Meeting',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    title: 'Shopping List',
+    content: 'Buy groceries: milk, eggs, bread, vegetables, and fruits.',
+    tag: 'Shopping',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '4',
+    title: 'Work Task',
+    content: 'Complete the project documentation and submit for review.',
+    tag: 'Work',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '5',
+    title: 'Personal Goal',
+    content: 'Start learning a new language. Practice 30 minutes every day.',
+    tag: 'Personal',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
 export const notesApi = {
-  getAll: async (): Promise<Note[]> => {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return [...mockNotes];
+  getAll: async (params?: GetNotesParams): Promise<GetNotesResponse> => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    let filtered = [...mockNotes];
+
+    // Фільтрація за тегом
+    if (params?.tag && params.tag !== 'All') {
+      filtered = filtered.filter((note) => note.tag === params.tag);
     }
-    const response = await api.get('/notes');
-    return response.data;
+
+    // Фільтрація за пошуком
+    if (params?.search) {
+      const searchLower = params.search.toLowerCase();
+      filtered = filtered.filter(
+        (note) =>
+          note.title.toLowerCase().includes(searchLower) ||
+          note.content.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const total = filtered.length;
+    const page = params?.page || 1;
+    const limit = params?.limit || 6;
+    const totalPages = Math.ceil(total / limit);
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const data = filtered.slice(start, end);
+
+    return { data, total, page, totalPages };
   },
 
   getById: async (id: string): Promise<Note> => {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const note = mockNotes.find((n) => n.id === id);
-      if (!note) throw new Error('Note not found');
-      return { ...note };
-    }
-    const response = await api.get(`/notes/${id}`);
-    return response.data;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const note = mockNotes.find((n) => n.id === id);
+    if (!note) throw new Error('Note not found');
+    return { ...note };
   },
 
   create: async (data: CreateNoteDto): Promise<Note> => {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const newNote: Note = {
-        ...data,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      mockNotes.push(newNote);
-      return { ...newNote };
-    }
-    const response = await api.post('/notes', data);
-    return response.data;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const newNote: Note = {
+      ...data,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockNotes.push(newNote);
+    return { ...newNote };
   },
 
   update: async (id: string, data: Partial<CreateNoteDto>): Promise<Note> => {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const index = mockNotes.findIndex((n) => n.id === id);
-      if (index === -1) throw new Error('Note not found');
-      mockNotes[index] = { ...mockNotes[index], ...data, updatedAt: new Date().toISOString() };
-      return { ...mockNotes[index] };
-    }
-    const response = await api.patch(`/notes/${id}`, data);
-    return response.data;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const index = mockNotes.findIndex((n) => n.id === id);
+    if (index === -1) throw new Error('Note not found');
+    mockNotes[index] = { ...mockNotes[index], ...data, updatedAt: new Date().toISOString() };
+    return { ...mockNotes[index] };
   },
 
   delete: async (id: string): Promise<void> => {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      mockNotes = mockNotes.filter((n) => n.id !== id);
-      return;
-    }
-    await api.delete(`/notes/${id}`);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    mockNotes = mockNotes.filter((n) => n.id !== id);
   },
 
   getByTag: async (tag: string): Promise<Note[]> => {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return mockNotes.filter((n) => n.tag === tag);
-    }
-    const response = await api.get(`/notes?tag=${tag}`);
-    return response.data;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return mockNotes.filter((n) => n.tag === tag);
   },
 };

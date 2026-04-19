@@ -1,44 +1,63 @@
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
-import { notesApi } from "@/lib/api/notes";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { TagType } from "@/types/note";
-import css from "./NotesClient.module.css";
+import { useQuery } from '@tanstack/react-query';
+import { apiService } from '@/lib/api';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { TagType } from '@/types/note';
+import SearchBox from '@/components/SearchBox/SearchBox';
+import Pagination from '@/components/Pagination/Pagination';
+import NoteList from '@/components/NoteList/NoteList';
+import css from './NotesClient.module.css';
 
 interface NotesClientProps {
   initialTag?: string;
 }
 
+const ITEMS_PER_PAGE = 6;
+
 export default function NotesClient({ initialTag }: NotesClientProps) {
   const router = useRouter();
-  const [selectedTag, setSelectedTag] = useState<TagType | "All">(
-    (initialTag as TagType) || "All",
-  );
+  const [selectedTag, setSelectedTag] = useState<TagType | 'All'>((initialTag as TagType) || 'All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Правильні теги - без 'In Progress'
+  const tags: (TagType | 'All')[] = ['All', 'Todo', 'Work', 'Personal', 'Meeting', 'Shopping'];
 
   const {
-    data: notes,
+    data: notesData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["notes", selectedTag],
+    queryKey: ['notes', selectedTag, searchQuery, currentPage],
     queryFn: () =>
-      selectedTag === "All"
-        ? notesApi.getAll()
-        : notesApi.getByTag(selectedTag),
+      apiService.getAll({
+        tag: selectedTag === 'All' ? undefined : selectedTag,
+        search: searchQuery || undefined,
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      }),
   });
 
-  const tags: (TagType | "All")[] = ["All", "Todo", "In Progress", "Done"];
-
-  const handleTagClick = (tag: TagType | "All") => {
+  const handleTagClick = (tag: TagType | 'All') => {
     setSelectedTag(tag);
-    if (tag === "All") {
-      router.push("/notes");
+    setCurrentPage(1);
+    if (tag === 'All') {
+      router.push('/notes');
     } else {
-      router.push(`/notes/filter/${tag.toLowerCase().replace(" ", "-")}`);
+      router.push(`/notes/filter/${tag.toLowerCase()}`);
     }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   if (isLoading) {
@@ -55,9 +74,7 @@ export default function NotesClient({ initialTag }: NotesClientProps) {
     return (
       <main className={css.main}>
         <div className={css.container}>
-          <div className={css.error}>
-            Error loading notes. Please try again.
-          </div>
+          <div className={css.error}>Error loading notes. Please try again.</div>
         </div>
       </main>
     );
@@ -78,43 +95,28 @@ export default function NotesClient({ initialTag }: NotesClientProps) {
             <button
               key={tag}
               onClick={() => handleTagClick(tag)}
-              className={`${css.tag} ${selectedTag === tag ? css.tagActive : ""}`}
+              className={`${css.tag} ${selectedTag === tag ? css.tagActive : ''}`}
             >
               {tag}
             </button>
           ))}
         </div>
 
-        {notes && notes.length === 0 ? (
+        <SearchBox onSearch={handleSearch} />
+
+        {notesData?.data?.length === 0 ? (
           <div className={css.empty}>
             <p>No notes found. Create your first note!</p>
           </div>
         ) : (
-          <div className={css.notesGrid}>
-            {notes?.map((note) => (
-              <Link
-                href={`/notes/${note.id}`}
-                key={note.id}
-                className={css.noteCard}
-              >
-                <div className={css.noteHeader}>
-                  <h3 className={css.noteTitle}>{note.title}</h3>
-                  <span
-                    className={`${css.noteTag} ${css[`tag${note.tag.replace(" ", "")}`]}`}
-                  >
-                    {note.tag}
-                  </span>
-                </div>
-                <p className={css.noteContent}>
-                  {note.content.substring(0, 100)}
-                  {note.content.length > 100 ? "..." : ""}
-                </p>
-                <div className={css.noteDate}>
-                  {new Date(note.createdAt).toLocaleDateString()}
-                </div>
-              </Link>
-            ))}
-          </div>
+          <>
+            <NoteList notes={notesData?.data || []} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={notesData?.totalPages || 1}
+              onPageChange={handlePageChange}
+            />
+          </>
         )}
       </div>
     </main>
